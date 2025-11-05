@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app" id="app" hidden>
+  <div class="app" id="app">
     <header class="app__header">
       <div>
         <h1>DailyFocus</h1>
@@ -18,7 +18,6 @@
       </div>
       <div class="header__controls">
         <button id="themeToggle" aria-label="Toggle color theme">🌗 Theme</button>
-        <button id="lockToggle" aria-label="Set a password lock">🔒 Lock</button>
       </div>
     </header>
 
@@ -63,22 +62,13 @@
     </main>
 
     <footer class="app__footer">
-      <button id="exportBtn" class="secondary">⬇️ Export data</button>
+      <div class="footer__actions">
+        <button id="exportBtn" class="secondary">⬇️ Export data</button>
+        <button id="importBtn" class="secondary">⬆️ Import data</button>
+        <input id="importInput" type="file" accept="application/json" hidden />
+      </div>
       <span id="saveStatus" role="status" aria-live="polite"></span>
     </footer>
-  </div>
-
-  <div id="unlockScreen" class="unlock" hidden>
-    <div class="unlock__dialog">
-      <h2>Welcome back to DailyFocus</h2>
-      <p>Enter your passphrase to continue.</p>
-      <input id="unlockInput" type="password" placeholder="Passphrase" />
-      <div class="unlock__actions">
-        <button id="unlockConfirm" class="primary">Unlock</button>
-        <button id="unlockReset" class="secondary">Reset lock</button>
-      </div>
-      <p class="unlock__hint">Forgotten it? Resetting will clear only the lock, not your data.</p>
-    </div>
   </div>
 
   <template id="noteTemplate">
@@ -88,6 +78,27 @@
         <input type="date" class="note-date" />
       </div>
       <textarea class="note-content" rows="3" placeholder="Summarize your day..." spellcheck="true"></textarea>
+      <div class="note-attachments">
+        <div class="note-attachments__controls">
+          <input
+            type="url"
+            class="note-link"
+            placeholder="Add a link (https://...)"
+            inputmode="url"
+          />
+          <label class="note-photo-upload">
+            <input type="file" class="note-photo-input" accept="image/*" hidden />
+            📷 Upload photo
+          </label>
+        </div>
+        <a class="note-link-preview" href="#" target="_blank" rel="noopener noreferrer" hidden>
+          🔗 Open attached link
+        </a>
+        <div class="note-photo-preview" hidden>
+          <img alt="Uploaded note attachment" />
+          <button type="button" class="ghost remove-photo">Remove photo</button>
+        </div>
+      </div>
       <div class="card__actions">
         <button class="ghost delete-note" aria-label="Delete note">🗑 Delete</button>
       </div>

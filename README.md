@@ -1,6 +1,6 @@
 # DailyFocus
 
-DailyFocus is a minimalistic daily journal and TODO tracker designed to help you build consistent habits without leaving your browser. All notes and tasks stay on your device thanks to `localStorage` persistence and optional password locking.
+DailyFocus is a minimalistic daily journal and TODO tracker designed to help you build consistent habits without leaving your browser. All notes and tasks stay on your device thanks to `localStorage` persistence.
 
 ## Features
 
@@ -8,7 +8,8 @@ DailyFocus is a minimalistic daily journal and TODO tracker designed to help you
 - Unlimited days with up to 50 notes per day, keyboard-friendly quick add shortcuts, and inline editing.
 - TODO tracker with creation timestamps, optional deadlines, completion toggles, and deletion controls.
 - Automatic dark/light theme detection with manual toggle and persistent preference.
-- Optional password lock stored locally and a one-click export of all data as JSON.
+- Weekly note groups with collapsible summaries labelled by date range.
+- Link and photo attachments for each note plus quick import/export of your data as JSON.
 - Responsive, minimalist UI with subtle animations and motivational messaging.
 
 ## Getting Started
@@ -20,9 +21,8 @@ You only need a modern web browser. No build step or backend is required.
 ### Run locally
 
 1. Clone this repository or download the source files.
-2. (Optional) Adjust `.env` for defaults such as the preferred theme or enabling the password prompt.
-3. Open `index.html` in your browser.
-4. Start adding notes (`Ctrl + Enter`) and todos (`Alt + Enter`). All changes are saved automatically.
+2. Open `index.html` in your browser.
+3. Start adding notes (`Ctrl + Enter`) and todos (`Alt + Enter`). All changes are saved automatically.
 
 ### Deploy to GitHub Pages
 
@@ -39,10 +39,9 @@ Use the **Export data** button at the bottom of the interface to download `daily
 
 - Edit `styles.css` to adjust colors, spacing, or typography.
 - Tweak `script.js` inline comments to modify shortcuts, storage keys, or add more sections.
-- If you prefer not to use the password prompt, either disable it from the interface or set `ENABLE_PASSWORD_PROMPT=false` in `.env`.
 
 ## Security & privacy
 
-All data is stored in your browser's `localStorage` and never sent to external servers. The optional password lock offers basic privacy by requiring a passphrase on load; it is stored locally (encoded with `btoa`). For stronger protection consider using a browser-level password manager or OS account security.
+All data is stored in your browser's `localStorage` and never sent to external servers. For stronger protection consider using a browser-level password manager or OS account security.
 
 Enjoy staying consistent today! 💪
