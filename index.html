@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DailyFocus — Stay consistent today</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app" hidden>
+    <header class="app__header">
+      <div>
+        <h1>DailyFocus</h1>
+        <p class="app__tagline">Stay consistent today 💪</p>
+      </div>
+      <div class="header__controls">
+        <button id="themeToggle" aria-label="Toggle color theme">🌗 Theme</button>
+        <button id="lockToggle" aria-label="Set a password lock">🔒 Lock</button>
+      </div>
+    </header>
+
+    <main class="app__main">
+      <section class="section section--notes">
+        <div class="section__heading">
+          <h2>What I did today</h2>
+          <div class="section__actions">
+            <span id="todayDate" class="section__date"></span>
+            <button id="addNoteBtn" class="primary">+ Add Note</button>
+          </div>
+        </div>
+        <p class="section__hint">Tip: Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to quickly add a note.</p>
+        <div id="notesList" class="card-list" aria-live="polite"></div>
+      </section>
+
+      <section class="section section--todos">
+        <div class="section__heading">
+          <h2>TODOs</h2>
+          <button id="addTodoBtn" class="primary">+ Add TODO</button>
+        </div>
+        <p class="section__hint">Tip: Press <kbd>Alt</kbd> + <kbd>Enter</kbd> to quickly add a todo.</p>
+        <div id="todosList" class="card-list" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="app__footer">
+      <button id="exportBtn" class="secondary">⬇️ Export data</button>
+      <span id="saveStatus" role="status" aria-live="polite"></span>
+    </footer>
+  </div>
+
+  <div id="unlockScreen" class="unlock" hidden>
+    <div class="unlock__dialog">
+      <h2>Welcome back to DailyFocus</h2>
+      <p>Enter your passphrase to continue.</p>
+      <input id="unlockInput" type="password" placeholder="Passphrase" />
+      <div class="unlock__actions">
+        <button id="unlockConfirm" class="primary">Unlock</button>
+        <button id="unlockReset" class="secondary">Reset lock</button>
+      </div>
+      <p class="unlock__hint">Forgotten it? Resetting will clear only the lock, not your data.</p>
+    </div>
+  </div>
+
+  <template id="noteTemplate">
+    <article class="card card--note fade-in">
+      <div class="card__row">
+        <label class="card__label" for="">Date</label>
+        <input type="date" class="note-date" />
+      </div>
+      <textarea class="note-content" rows="3" placeholder="Summarize your day..." spellcheck="true"></textarea>
+      <div class="card__actions">
+        <button class="ghost delete-note" aria-label="Delete note">🗑 Delete</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="todoTemplate">
+    <article class="card card--todo fade-in">
+      <div class="card__row card__row--spread">
+        <label class="card__label">Task</label>
+        <span class="todo-created"></span>
+      </div>
+      <div class="card__row card__row--task">
+        <input type="checkbox" class="todo-done" aria-label="Mark todo done" />
+        <input type="text" class="todo-text" placeholder="Describe your next action" />
+      </div>
+      <div class="card__row card__row--spread">
+        <label class="card__label" for="">Deadline</label>
+        <input type="date" class="todo-deadline" />
+      </div>
+      <div class="card__actions">
+        <button class="ghost delete-todo" aria-label="Delete todo">🗑 Delete</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
