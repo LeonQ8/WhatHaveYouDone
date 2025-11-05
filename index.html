@@ -28,6 +28,13 @@
           <h2>What I did today</h2>
           <div class="section__actions">
             <span id="todayDate" class="section__date"></span>
+            <input
+              type="search"
+              id="noteSearch"
+              class="section__search"
+              placeholder="Search notes"
+              aria-label="Search notes"
+            />
             <button id="addNoteBtn" class="primary">+ Add Note</button>
           </div>
         </div>
@@ -38,7 +45,17 @@
       <section class="section section--todos">
         <div class="section__heading">
           <h2>TODOs</h2>
-          <button id="addTodoBtn" class="primary">+ Add TODO</button>
+          <div class="section__actions">
+            <button
+              id="toggleTodosBtn"
+              class="secondary"
+              aria-expanded="true"
+              aria-controls="todosList"
+            >
+              Hide TODOs
+            </button>
+            <button id="addTodoBtn" class="primary">+ Add TODO</button>
+          </div>
         </div>
         <p class="section__hint">Tip: Press <kbd>Alt</kbd> + <kbd>Enter</kbd> to quickly add a todo.</p>
         <div id="todosList" class="card-list" aria-live="polite"></div>

@@ -107,6 +107,7 @@ textarea {
   align-items: center;
   gap: 1rem;
   font-size: 0.95rem;
+  flex-wrap: wrap;
 }
 
 .section__date {
@@ -114,6 +115,21 @@ textarea {
   background: rgba(37, 99, 235, 0.08);
   color: var(--color-primary);
   border-radius: 999px;
+}
+
+.section__search {
+  min-width: 190px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: inherit;
+  transition: border 0.2s ease, background 0.2s ease;
+}
+
+.section__search:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .section__hint {
@@ -198,6 +214,11 @@ textarea {
 .unlock input[type='password']:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+.section--todos.is-collapsed .section__hint,
+.section--todos.is-collapsed #todosList {
+  display: none;
 }
 
 .todo-text {
