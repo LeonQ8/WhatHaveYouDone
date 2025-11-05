@@ -15,6 +15,9 @@ const saveStatus = document.getElementById('saveStatus');
 const todayDateEl = document.getElementById('todayDate');
 const themeToggle = document.getElementById('themeToggle');
 const lockToggle = document.getElementById('lockToggle');
+const noteSearchInput = document.getElementById('noteSearch');
+const toggleTodosBtn = document.getElementById('toggleTodosBtn');
+const todosSection = document.querySelector('.section--todos');
 
 const unlockScreen = document.getElementById('unlockScreen');
 const unlockInput = document.getElementById('unlockInput');
@@ -27,8 +30,11 @@ const todoTemplate = document.getElementById('todoTemplate');
 let state = {
   notes: [],
   todos: [],
-  lastOpened: new Date().toISOString().slice(0, 10)
+  lastOpened: new Date().toISOString().slice(0, 10),
+  todosCollapsed: false
 };
+
+let noteSearchQuery = '';
 
 // Utilities ---------------------------------------------------------------
 const formatDate = (date = new Date()) => {
@@ -57,9 +63,9 @@ const showStatus = (message) => {
   }, 2500);
 };
 
-const persistState = () => {
+const persistState = (message) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  showStatus('✅ Saved your note for today');
+  showStatus(message ?? '💾 Changes saved');
 };
 
 const loadState = () => {
@@ -72,6 +78,7 @@ const loadState = () => {
       console.error('Failed to parse saved data', error);
     }
   }
+  state.todosCollapsed = Boolean(state.todosCollapsed);
 };
 
 const loadTheme = () => {
@@ -151,15 +158,27 @@ const createId = () =>
 // Rendering ---------------------------------------------------------------
 const renderNotes = () => {
   notesList.innerHTML = '';
-  if (!state.notes.length) {
+  const query = noteSearchQuery.trim().toLowerCase();
+  const baseNotes = query
+    ? state.notes.filter((note) => {
+        const haystack = `${note.content} ${note.date}`.toLowerCase();
+        return haystack.includes(query);
+      })
+    : state.notes;
+
+  if (!baseNotes.length) {
     const empty = document.createElement('p');
     empty.className = 'empty-state';
-    empty.textContent = "Add a quick reflection to start your streak.";
+    empty.textContent = query
+      ? `No notes found for “${noteSearchQuery.trim()}”.`
+      : 'Add a quick reflection to start your streak.';
     notesList.append(empty);
     return;
   }
 
-  const sorted = [...state.notes].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const sorted = [...baseNotes].sort((a, b) =>
+    b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
+  );
   sorted.forEach((note) => {
     const node = noteTemplate.content.firstElementChild.cloneNode(true);
     const dateInput = node.querySelector('.note-date');
@@ -172,6 +191,7 @@ const renderNotes = () => {
     dateInput.onchange = (event) => {
       note.date = event.target.value;
       persistState();
+      renderNotes();
     };
 
     textarea.oninput = (event) => {
@@ -181,7 +201,7 @@ const renderNotes = () => {
 
     deleteBtn.onclick = () => {
       state.notes = state.notes.filter((item) => item.id !== note.id);
-      persistState();
+      persistState('🗑️ Note removed');
       renderNotes();
     };
 
@@ -191,6 +211,22 @@ const renderNotes = () => {
 
 const renderTodos = () => {
   todosList.innerHTML = '';
+  const remainingOpen = state.todos.filter((todo) => !todo.done).length;
+  const collapsed = Boolean(state.todosCollapsed);
+  if (toggleTodosBtn) {
+    toggleTodosBtn.textContent = collapsed
+      ? remainingOpen
+        ? `Show TODOs (${remainingOpen})`
+        : 'Show TODOs'
+      : remainingOpen
+      ? `Hide TODOs (${remainingOpen})`
+      : 'Hide TODOs';
+    toggleTodosBtn.setAttribute('aria-expanded', String(!collapsed));
+  }
+  if (todosSection) {
+    todosSection.classList.toggle('is-collapsed', collapsed);
+  }
+
   if (!state.todos.length) {
     const empty = document.createElement('p');
     empty.className = 'empty-state';
@@ -201,6 +237,12 @@ const renderTodos = () => {
 
   const sorted = [...state.todos].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.deadline && b.deadline) {
+      const deadlineComparison = a.deadline.localeCompare(b.deadline);
+      if (deadlineComparison !== 0) return deadlineComparison;
+    } else if (a.deadline || b.deadline) {
+      return a.deadline ? -1 : 1;
+    }
     return a.createdAt.localeCompare(b.createdAt);
   });
 
@@ -236,11 +278,12 @@ const renderTodos = () => {
     deadlineInput.onchange = (event) => {
       todo.deadline = event.target.value || null;
       persistState();
+      renderTodos();
     };
 
     deleteBtn.onclick = () => {
       state.todos = state.todos.filter((item) => item.id !== todo.id);
-      persistState();
+      persistState('🗑️ TODO removed');
       renderTodos();
     };
 
@@ -263,7 +306,7 @@ const addNote = () => {
     content: '',
     createdAt: new Date().toISOString()
   });
-  persistState();
+  persistState('✅ Saved your note for today');
   renderNotes();
   focusFirstNote();
 };
@@ -283,7 +326,7 @@ const addTodo = () => {
     deadline: null,
     done: false
   });
-  persistState();
+  persistState('✅ TODO added');
   renderTodos();
   focusNewestTodo();
 };
@@ -330,7 +373,6 @@ const init = () => {
   ensureUnlock();
   renderNotes();
   renderTodos();
-  app.hidden = false;
 
   addNoteBtn.addEventListener('click', addNote);
   addTodoBtn.addEventListener('click', addTodo);
@@ -340,6 +382,29 @@ const init = () => {
     applyTheme(current === 'dark' ? 'light' : 'dark');
   });
   lockToggle.addEventListener('click', setLock);
+
+  if (noteSearchInput) {
+    noteSearchInput.value = noteSearchQuery;
+    noteSearchInput.addEventListener('input', (event) => {
+      noteSearchQuery = event.target.value;
+      renderNotes();
+    });
+    noteSearchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && noteSearchQuery) {
+        noteSearchQuery = '';
+        noteSearchInput.value = '';
+        renderNotes();
+      }
+    });
+  }
+
+  if (toggleTodosBtn) {
+    toggleTodosBtn.addEventListener('click', () => {
+      state.todosCollapsed = !state.todosCollapsed;
+      persistState(state.todosCollapsed ? '📁 TODOs hidden' : '📂 TODOs visible');
+      renderTodos();
+    });
+  }
 
   bindGlobalShortcuts();
 };
