@@ -1,28 +1,22 @@
 // DailyFocus main logic
 const STORAGE_KEY = 'dailyFocusData';
-const PASSWORD_KEY = 'dailyFocusPassword';
 const THEME_KEY = 'dailyFocusTheme';
 const MAX_NOTES_PER_DAY = 50;
 
 // Cached DOM references
-const app = document.getElementById('app');
 const notesList = document.getElementById('notesList');
 const todosList = document.getElementById('todosList');
 const addNoteBtn = document.getElementById('addNoteBtn');
 const addTodoBtn = document.getElementById('addTodoBtn');
 const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importInput = document.getElementById('importInput');
 const saveStatus = document.getElementById('saveStatus');
 const todayDateEl = document.getElementById('todayDate');
 const themeToggle = document.getElementById('themeToggle');
-const lockToggle = document.getElementById('lockToggle');
 const noteSearchInput = document.getElementById('noteSearch');
 const toggleTodosBtn = document.getElementById('toggleTodosBtn');
 const todosSection = document.querySelector('.section--todos');
-
-const unlockScreen = document.getElementById('unlockScreen');
-const unlockInput = document.getElementById('unlockInput');
-const unlockConfirm = document.getElementById('unlockConfirm');
-const unlockReset = document.getElementById('unlockReset');
 
 const noteTemplate = document.getElementById('noteTemplate');
 const todoTemplate = document.getElementById('todoTemplate');
@@ -31,10 +25,12 @@ let state = {
   notes: [],
   todos: [],
   lastOpened: new Date().toISOString().slice(0, 10),
-  todosCollapsed: false
+  todosCollapsed: false,
+  collapsedWeeks: {}
 };
 
 let noteSearchQuery = '';
+let isRenderingNotes = false;
 
 // Utilities ---------------------------------------------------------------
 const formatDate = (date = new Date()) => {
@@ -79,6 +75,14 @@ const loadState = () => {
     }
   }
   state.todosCollapsed = Boolean(state.todosCollapsed);
+  state.collapsedWeeks =
+    state.collapsedWeeks && typeof state.collapsedWeeks === 'object'
+      ? state.collapsedWeeks
+      : {};
+  state.notes = Array.isArray(state.notes)
+    ? state.notes.map(normalizeNote)
+    : [];
+  state.todos = Array.isArray(state.todos) ? state.todos : [];
 };
 
 const loadTheme = () => {
@@ -94,74 +98,55 @@ const applyTheme = (theme) => {
   themeToggle.textContent = theme === 'dark' ? '🌞 Light' : '🌚 Dark';
 };
 
-const ensureUnlock = () => {
-  const password = localStorage.getItem(PASSWORD_KEY);
-  if (!password) {
-    app.hidden = false;
-    unlockScreen.hidden = true;
-    return;
-  }
-
-  unlockScreen.hidden = false;
-  app.hidden = true;
-
-  const attemptUnlock = () => {
-    const value = unlockInput.value.trim();
-    if (!value) return;
-    if (btoa(value) === password) {
-      unlockInput.value = '';
-      unlockScreen.hidden = true;
-      app.hidden = false;
-      showStatus('🔓 Welcome back!');
-    } else {
-      unlockInput.select();
-      showStatus('❌ Incorrect passphrase');
-    }
-  };
-
-  unlockConfirm.onclick = attemptUnlock;
-  unlockInput.onkeydown = (event) => {
-    if (event.key === 'Enter') {
-      attemptUnlock();
-    }
-  };
-
-  unlockReset.onclick = () => {
-    localStorage.removeItem(PASSWORD_KEY);
-    unlockInput.value = '';
-    ensureUnlock();
-    showStatus('🔁 Lock cleared');
-  };
-};
-
-const setLock = () => {
-  const current = localStorage.getItem(PASSWORD_KEY);
-  const message = current ? 'Update your DailyFocus passphrase:' : 'Set a DailyFocus passphrase:';
-  const next = prompt(message);
-  if (next === null) return;
-  const trimmed = next.trim();
-  if (!trimmed) {
-    localStorage.removeItem(PASSWORD_KEY);
-    showStatus('🔓 Lock disabled');
-  } else {
-    localStorage.setItem(PASSWORD_KEY, btoa(trimmed));
-    showStatus('🔒 Lock enabled');
-  }
-  ensureUnlock();
-};
-
 const createId = () =>
   (typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
+const normalizeNote = (note) => ({
+  id: note.id || createId(),
+  date: note.date || formatDate(new Date()),
+  content: typeof note.content === 'string' ? note.content : '',
+  createdAt: note.createdAt || new Date().toISOString(),
+  photo: note.photo || null,
+  photoName: note.photoName || null,
+  link: typeof note.link === 'string' ? note.link.trim() : ''
+});
+
+const getWeekRange = (isoDate) => {
+  if (!isoDate) {
+    const today = formatDate(new Date());
+    return getWeekRange(today);
+  }
+  const date = new Date(`${isoDate}T00:00`);
+  if (Number.isNaN(date.getTime())) {
+    const today = formatDate(new Date());
+    return getWeekRange(today);
+  }
+  const day = date.getDay();
+  const diffToMonday = (day + 6) % 7;
+  const start = new Date(date);
+  start.setDate(date.getDate() - diffToMonday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const startIso = formatDate(start);
+  const endIso = formatDate(end);
+  return {
+    start: startIso,
+    end: endIso,
+    key: `${startIso}_${endIso}`,
+    label: `${humanReadableDate(startIso)} — ${humanReadableDate(endIso)}`
+  };
+};
+
 // Rendering ---------------------------------------------------------------
 const renderNotes = () => {
+  isRenderingNotes = true;
   notesList.innerHTML = '';
   const query = noteSearchQuery.trim().toLowerCase();
   const baseNotes = query
     ? state.notes.filter((note) => {
-        const haystack = `${note.content} ${note.date}`.toLowerCase();
+        const haystack = `${note.content} ${note.date} ${note.link || ''}`.toLowerCase();
         return haystack.includes(query);
       })
     : state.notes;
@@ -173,40 +158,182 @@ const renderNotes = () => {
       ? `No notes found for “${noteSearchQuery.trim()}”.`
       : 'Add a quick reflection to start your streak.';
     notesList.append(empty);
+    isRenderingNotes = false;
     return;
   }
 
   const sorted = [...baseNotes].sort((a, b) =>
     b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
   );
-  sorted.forEach((note) => {
-    const node = noteTemplate.content.firstElementChild.cloneNode(true);
-    const dateInput = node.querySelector('.note-date');
-    const textarea = node.querySelector('.note-content');
-    const deleteBtn = node.querySelector('.delete-note');
+  const groups = sorted.reduce((acc, note) => {
+    const range = getWeekRange(note.date);
+    if (!acc[range.key]) {
+      acc[range.key] = {
+        ...range,
+        notes: []
+      };
+    }
+    acc[range.key].notes.push(note);
+    return acc;
+  }, {});
 
-    dateInput.value = note.date;
-    textarea.value = note.content;
+  const activeKeys = new Set();
+  Object.values(groups)
+    .sort((a, b) => b.start.localeCompare(a.start))
+    .forEach((group) => {
+      activeKeys.add(group.key);
+      const details = document.createElement('details');
+      details.className = 'week-group';
+      details.dataset.week = group.key;
+      const shouldOpen = query ? true : !state.collapsedWeeks?.[group.key];
+      details.open = shouldOpen;
 
-    dateInput.onchange = (event) => {
-      note.date = event.target.value;
-      persistState();
-      renderNotes();
-    };
+      const summary = document.createElement('summary');
+      summary.className = 'week-group__summary';
+      summary.textContent = `${group.label} (${group.notes.length})`;
+      summary.setAttribute('aria-label', `${group.label} (${group.notes.length} notes)`);
+      details.append(summary);
 
-    textarea.oninput = (event) => {
-      note.content = event.target.value;
-      persistState();
-    };
+      const list = document.createElement('div');
+      list.className = 'week-group__notes';
 
-    deleteBtn.onclick = () => {
-      state.notes = state.notes.filter((item) => item.id !== note.id);
-      persistState('🗑️ Note removed');
-      renderNotes();
-    };
+      group.notes.forEach((note) => {
+        const node = noteTemplate.content.firstElementChild.cloneNode(true);
+        const dateInput = node.querySelector('.note-date');
+        const textarea = node.querySelector('.note-content');
+        const deleteBtn = node.querySelector('.delete-note');
+        const linkInput = node.querySelector('.note-link');
+        const linkPreview = node.querySelector('.note-link-preview');
+        const photoInput = node.querySelector('.note-photo-input');
+        const photoWrapper = node.querySelector('.note-photo-preview');
+        const photoImg = photoWrapper.querySelector('img');
+        const removePhotoBtn = node.querySelector('.remove-photo');
 
-    notesList.append(node);
-  });
+        dateInput.value = note.date;
+        textarea.value = note.content;
+        linkInput.value = note.link || '';
+
+        const updateLinkPreview = () => {
+          const trimmed = linkInput.value.trim();
+          if (!trimmed) {
+            linkPreview.hidden = true;
+            return;
+          }
+
+          try {
+            const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed);
+            const href = hasProtocol ? trimmed : `https://${trimmed}`;
+            const url = new URL(href);
+            linkPreview.href = url.href;
+            const display = url.href.replace(/^https?:\/\//, '');
+            linkPreview.textContent = `🔗 ${display}`;
+            linkPreview.hidden = false;
+          } catch (error) {
+            linkPreview.hidden = true;
+          }
+        };
+
+        const updatePhotoPreview = (message) => {
+          if (note.photo) {
+            photoImg.src = note.photo;
+            photoImg.alt = note.photoName ? `Attachment: ${note.photoName}` : 'Uploaded note attachment';
+            photoWrapper.hidden = false;
+            if (message) {
+              persistState(message);
+            } else {
+              persistState();
+            }
+          }
+        };
+
+        updateLinkPreview();
+
+        if (note.photo) {
+          photoImg.src = note.photo;
+          photoImg.alt = note.photoName ? `Attachment: ${note.photoName}` : 'Uploaded note attachment';
+          photoWrapper.hidden = false;
+        } else {
+          photoWrapper.hidden = true;
+        }
+
+        dateInput.onchange = (event) => {
+          note.date = event.target.value;
+          persistState();
+          renderNotes();
+        };
+
+        textarea.oninput = (event) => {
+          note.content = event.target.value;
+          persistState();
+        };
+
+        linkInput.oninput = (event) => {
+          note.link = event.target.value.trim();
+          updateLinkPreview();
+          persistState();
+        };
+
+        photoInput.onchange = (event) => {
+          const input = event.target;
+          const file = input.files?.[0];
+          if (!file) return;
+          if (!file.type.startsWith('image/')) {
+            showStatus('⚠️ Please choose an image file.');
+            input.value = '';
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            note.photo = reader.result;
+            note.photoName = file.name;
+            updatePhotoPreview('🖼️ Photo added');
+            renderNotes();
+            input.value = '';
+          };
+          reader.onerror = () => {
+            showStatus('❌ Failed to read the selected file');
+            input.value = '';
+          };
+          reader.readAsDataURL(file);
+        };
+
+        removePhotoBtn.onclick = () => {
+          if (!note.photo) return;
+          note.photo = null;
+          note.photoName = null;
+          persistState('🗑️ Photo removed');
+          renderNotes();
+        };
+
+        deleteBtn.onclick = () => {
+          state.notes = state.notes.filter((item) => item.id !== note.id);
+          persistState('🗑️ Note removed');
+          renderNotes();
+        };
+
+        list.append(node);
+      });
+
+      details.append(list);
+      details.addEventListener('toggle', () => {
+        if (isRenderingNotes) return;
+        state.collapsedWeeks = state.collapsedWeeks || {};
+        state.collapsedWeeks[group.key] = !details.open;
+        persistState();
+      });
+
+      notesList.append(details);
+    });
+
+  if (state.collapsedWeeks) {
+    Object.keys(state.collapsedWeeks).forEach((key) => {
+      if (!activeKeys.has(key)) {
+        delete state.collapsedWeeks[key];
+      }
+    });
+  }
+
+  isRenderingNotes = false;
 };
 
 const renderTodos = () => {
@@ -304,7 +431,10 @@ const addNote = () => {
     id: createId(),
     date: today,
     content: '',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    photo: null,
+    photoName: null,
+    link: ''
   });
   persistState('✅ Saved your note for today');
   renderNotes();
@@ -353,6 +483,46 @@ const exportData = () => {
   showStatus('📤 Exported daily summary');
 };
 
+const importData = (file) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const parsed = JSON.parse(text);
+      const importedNotes = Array.isArray(parsed.notes)
+        ? parsed.notes.map(normalizeNote)
+        : state.notes;
+      const importedTodos = Array.isArray(parsed.todos) ? parsed.todos : state.todos;
+      const collapsedWeeks =
+        parsed && typeof parsed.collapsedWeeks === 'object' && parsed.collapsedWeeks !== null
+          ? parsed.collapsedWeeks
+          : {};
+      state = {
+        ...state,
+        ...parsed,
+        notes: importedNotes,
+        todos: importedTodos,
+        todosCollapsed: Boolean(parsed.todosCollapsed),
+        collapsedWeeks
+      };
+      persistState('📥 Data imported');
+      renderNotes();
+      renderTodos();
+    } catch (error) {
+      console.error('Failed to import data', error);
+      showStatus('❌ Failed to import data');
+    } finally {
+      importInput.value = '';
+    }
+  };
+  reader.onerror = () => {
+    showStatus('❌ Failed to read the file');
+    importInput.value = '';
+  };
+  reader.readAsText(file);
+};
+
 const bindGlobalShortcuts = () => {
   document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.key === 'Enter') {
@@ -368,20 +538,26 @@ const bindGlobalShortcuts = () => {
 
 const init = () => {
   todayDateEl.textContent = humanReadableDate(formatDate(new Date()));
+  localStorage.removeItem('dailyFocusPassword');
   loadState();
   loadTheme();
-  ensureUnlock();
   renderNotes();
   renderTodos();
 
   addNoteBtn.addEventListener('click', addNote);
   addTodoBtn.addEventListener('click', addTodo);
   exportBtn.addEventListener('click', exportData);
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (event) => {
+      const [file] = event.target.files || [];
+      importData(file);
+    });
+  }
   themeToggle.addEventListener('click', () => {
     const current = document.documentElement.getAttribute('data-theme') || 'light';
     applyTheme(current === 'dark' ? 'light' : 'dark');
   });
-  lockToggle.addEventListener('click', setLock);
 
   if (noteSearchInput) {
     noteSearchInput.value = noteSearchQuery;
