@@ -198,7 +198,7 @@ textarea {
 .note-date,
 .todo-text,
 .todo-deadline,
-.unlock input[type='password'] {
+.note-link {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border-radius: 12px;
@@ -211,7 +211,7 @@ textarea {
 .note-date:focus,
 .todo-text:focus,
 .todo-deadline:focus,
-.unlock input[type='password']:focus {
+.note-link:focus {
   outline: none;
   border-color: var(--color-primary);
 }
@@ -290,38 +290,131 @@ button.ghost:hover {
   min-height: 1.25rem;
 }
 
-.unlock {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
-  padding: 2rem;
+.footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
-.unlock__dialog {
-  max-width: 360px;
+.note-attachments {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.note-attachments__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.note-link {
+  flex: 1 1 200px;
+}
+
+.note-photo-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px dashed var(--color-border);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: border 0.2s ease, color 0.2s ease;
+}
+
+.note-photo-upload:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+
+.note-link-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.note-link-preview:hover {
+  text-decoration: underline;
+}
+
+.note-photo-preview {
+  display: grid;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.note-photo-preview img {
   width: 100%;
-  padding: 2rem;
-  background: var(--color-surface);
-  border-radius: 18px;
+  max-height: 200px;
+  border-radius: 12px;
+  object-fit: cover;
   border: 1px solid var(--color-border);
-  box-shadow: 0 24px 80px -30px var(--color-shadow);
-  display: grid;
-  gap: 1rem;
 }
 
-.unlock__hint {
-  margin: 0;
+.week-group {
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 0.6rem 1rem 1rem;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  transition: border 0.2s ease, background 0.3s ease;
+}
+
+.week-group summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.week-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.week-group summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  border-radius: 12px;
+  outline-offset: 3px;
+}
+
+.week-group__summary {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 1.05rem;
+  flex-wrap: wrap;
+}
+
+.week-group[open] .week-group__summary::after {
+  content: '▲ Hide';
   font-size: 0.85rem;
   color: var(--color-muted);
+  margin-left: auto;
 }
 
-.unlock__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+.week-group:not([open]) .week-group__summary::after {
+  content: '▼ Show';
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+.week-group__notes {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1.25rem;
 }
 
 .fade-in {
